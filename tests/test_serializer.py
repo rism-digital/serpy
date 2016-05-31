@@ -158,16 +158,21 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertEqual(data['a'], None)
+        # Tests that the key for a null value is not in the output
+        self.assertTrue('a' not in data)
 
         o = Obj(a='5')
         data = ASerializer(o).data
+        # Tests that the key on a non-required field with a value is in the output
         self.assertEqual(data['a'], 5)
 
+    def test_raises_for_type_coercion_on_none_value(self):
         class ASerializer(Serializer):
+            # Declare a required field
             a = IntField()
 
         o = Obj(a=None)
+        # Tests that a required field will raise an error if a None value is passed to it.
         self.assertRaises(TypeError, lambda: ASerializer(o).data)
 
     def test_error_on_data(self):

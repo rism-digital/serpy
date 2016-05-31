@@ -112,7 +112,13 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                         result = result()
                     if to_value:
                         result = to_value(result)
-            v[name] = result
+
+            if required:
+                v[name] = result
+            elif not required and result:
+                v[name] = result
+            else:
+                continue
 
         return v
 
