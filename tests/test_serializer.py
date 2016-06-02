@@ -156,10 +156,32 @@ class TestSerializer(unittest.TestCase):
         class ASerializer(Serializer):
             a = IntField(required=False)
 
-        o = Obj(a=None)
+        class BSerializer(Serializer):
+            b = IntField()
+
+        class CSerializer(DictSerializer):
+            c = IntField(required=False)
+
+        class DSerializer(DictSerializer):
+            d = IntField()
+
+        o = Obj()
         data = ASerializer(o).data
-        # Tests that the key for a null value is not in the output
+        # Tests that a missing key is not reflected in the output
+        # but with required=False does not raise an exception.
         self.assertTrue('a' not in data)
+
+        o = Obj()
+        with self.assertRaises(AttributeError):
+            BSerializer(o).data
+
+        d = {}
+        data = CSerializer(d).data
+        self.assertTrue('c' not in data)
+
+        d = {}
+        with self.assertRaises(KeyError):
+            DSerializer(d).data
 
         o = Obj(a='5')
         data = ASerializer(o).data
