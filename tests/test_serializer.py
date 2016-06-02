@@ -1,5 +1,5 @@
 from .obj import Obj
-from serpy.fields import Field, MethodField, IntField, FloatField, StrField
+from serpy.fields import Field, MethodField, IntField, FloatField, StrField, BoolField
 from serpy.serializer import Serializer, DictSerializer
 import unittest
 
@@ -166,6 +166,25 @@ class TestSerializer(unittest.TestCase):
         # Tests that the key on a non-required field with a value
         # is in the output
         self.assertEqual(data['a'], 5)
+
+    def test_optional_field_falsy_values(self):
+        # Tests the interactions between falsy values (0 or "")
+        # and the required flag.
+        class ASerializer(Serializer):
+            a = IntField(required=False)
+            b = BoolField(required=False)
+            # Check the falsy values of empty strings and
+            # whether they pass as both required and non-required fields.
+            c = StrField()
+            d = StrField(required=False)
+
+        o = Obj(a=0, b=False, c="", d="")
+        data = ASerializer(o).data
+        self.assertTrue('a' in data)
+        self.assertTrue('b' in data)
+        # Empty strings should always appear in the output
+        self.assertTrue('c' in data)
+        self.assertTrue('d' in data)
 
     def test_raises_for_type_coercion_on_none_value(self):
         class ASerializer(Serializer):
