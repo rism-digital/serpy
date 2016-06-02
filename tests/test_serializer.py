@@ -1,5 +1,7 @@
 from .obj import Obj
-from serpy.fields import Field, MethodField, IntField, FloatField, StrField, BoolField
+from serpy.fields import (
+    Field, MethodField, IntField, FloatField, StrField, BoolField
+)
 from serpy.serializer import Serializer, DictSerializer
 import unittest
 
