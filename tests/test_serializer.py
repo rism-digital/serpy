@@ -167,6 +167,9 @@ class TestSerializer(unittest.TestCase):
         class DSerializer(DictSerializer):
             d = IntField()
 
+        class ESerializer(Serializer):
+            e = CSerializer(required=False)
+
         o = Obj()
         data = ASerializer(o).data
         # Tests that a missing key is not reflected in the output
@@ -184,6 +187,9 @@ class TestSerializer(unittest.TestCase):
         d = {}
         with self.assertRaises(KeyError):
             DSerializer(d).data
+
+        o = Obj()
+        data = ESerializer(o).data
 
         o = Obj(a='5')
         data = ASerializer(o).data
