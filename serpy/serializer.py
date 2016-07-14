@@ -20,7 +20,7 @@ def _compile_field_to_tuple(field, name, serializer_cls):
     # Set the field name to a supplied label; defaults to the attribute name.
     name = field.label or name
 
-    return (name, getter, to_value, field.call, field.required,
+    return (name, getter, to_value, field.call, field.required, field.omit,
             field.getter_takes_serializer)
 
 
@@ -90,7 +90,7 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
     default_getter = operator.attrgetter
 
     def __init__(self, instance=None, many=False, data=None, context=None,
-                 omit=False, **kwargs):
+                 **kwargs):
         if data is not None:
             raise RuntimeError(
                 'serpy serializers do not support input validation')
@@ -98,20 +98,17 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
         super(Serializer, self).__init__(**kwargs)
         self.instance = instance
         self.many = many
-        self.omit = omit
         self._data = None
 
     def _serialize(self, instance, fields):
         v = {}
-        for name, getter, to_value, call, required, pass_self in fields:
+        for name, getter, to_value, call, required, omit, pass_self in fields:
             # NB: Catch AttributeError for objects; KeyError for dictionaries
             if pass_self:
                 try:
                     result = getter(self, instance)
                 except (AttributeError, KeyError):
                     if required:
-                        raise
-                    elif not self.omit:
                         raise
                     continue
             else:
@@ -120,8 +117,6 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                 except (AttributeError, KeyError):
                     if required:
                         raise
-                    elif not self.omit:
-                        raise
                     continue
 
                 if required or result is not None:
@@ -129,6 +124,8 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                         result = result()
                     if to_value:
                         result = to_value(result)
+            if result is None and omit:
+                continue
             v[name] = result
         return v
 

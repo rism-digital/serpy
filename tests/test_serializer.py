@@ -62,9 +62,32 @@ class TestSerializer(unittest.TestCase):
         self.assertEqual(data[3]['a'], 3)
         self.assertEqual(data[4]['a'], 4)
 
-    def test_omit(self):
+    def test_omit_field(self):
         class ASerializer(Serializer):
-            a = Field(required=False)
+            a = Field(required=False, omit=True)
+
+        class BSerializer(Serializer):
+            b = Field(required=False)
+
+        class CSerializer(Serializer):
+            c = Field()
+
+        obj = Obj(a=None, b=None)
+        data = ASerializer(obj).data
+        self.assertTrue('a' not in data)
+        data = BSerializer(obj).data
+        self.assertTrue('b' in data)
+
+        data = BSerializer(Obj()).data
+        self.assertTrue('b' not in data)
+        self.assertRaises(AttributeError, lambda: CSerializer(Obj()).data)
+
+    def test_omit_method_field(self):
+        class ASerializer(Serializer):
+            a = MethodField(required=False, omit=True)
+
+            def get_a(self, obj):
+                return obj.a
 
         class BSerializer(Serializer):
             b = MethodField(required=False)
@@ -73,25 +96,20 @@ class TestSerializer(unittest.TestCase):
                 return obj.b
 
         class CSerializer(Serializer):
-            c = Field()
-
-        class DSerializer(Serializer):
             c = MethodField()
 
             def get_c(self, obj):
                 return obj.c
 
-        obj = Obj()
-        data = ASerializer(obj, omit=True).data
+        obj = Obj(a=None, b=None)
+        data = ASerializer(obj).data
         self.assertTrue('a' not in data)
-        self.assertRaises(AttributeError, lambda: ASerializer(obj).data)
+        data = BSerializer(obj).data
+        self.assertTrue('b' in data)
 
-        data = BSerializer(obj, omit=True).data
+        data = BSerializer(Obj()).data
         self.assertTrue('b' not in data)
-        self.assertRaises(AttributeError, lambda: BSerializer(obj).data)
-
-        self.assertRaises(AttributeError, lambda: CSerializer(obj).data)
-        self.assertRaises(AttributeError, lambda: DSerializer(obj).data)
+        self.assertRaises(AttributeError, lambda: CSerializer(Obj()).data)
 
     def test_serializer_as_field(self):
         class ASerializer(Serializer):
