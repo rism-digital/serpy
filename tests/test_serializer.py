@@ -177,16 +177,14 @@ class TestSerializer(unittest.TestCase):
         self.assertTrue('a' not in data)
 
         o = Obj()
-        with self.assertRaises(AttributeError):
-            BSerializer(o).data
+        self.assertRaises(AttributeError, lambda: BSerializer(o).data)
 
         d = {}
         data = CSerializer(d).data
         self.assertTrue('c' not in data)
 
         d = {}
-        with self.assertRaises(KeyError):
-            DSerializer(d).data
+        self.assertRaises(KeyError, lambda: DSerializer(d).data)
 
         o = Obj()
         data = ESerializer(o).data
