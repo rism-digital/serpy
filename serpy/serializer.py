@@ -90,7 +90,7 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
     default_getter = operator.attrgetter
 
     def __init__(self, instance=None, many=False, data=None, context=None,
-                 **kwargs):
+                 omit=False, **kwargs):
         if data is not None:
             raise RuntimeError(
                 'serpy serializers do not support input validation')
@@ -98,6 +98,7 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
         super(Serializer, self).__init__(**kwargs)
         self.instance = instance
         self.many = many
+        self.omit = omit
         self._data = None
 
     def _serialize(self, instance, fields):
@@ -110,12 +111,16 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                 except (AttributeError, KeyError):
                     if required:
                         raise
+                    elif not self.omit:
+                        raise
                     continue
             else:
                 try:
                     result = getter(instance)
                 except (AttributeError, KeyError):
                     if required:
+                        raise
+                    elif not self.omit:
                         raise
                     continue
 
