@@ -62,6 +62,55 @@ class TestSerializer(unittest.TestCase):
         self.assertEqual(data[3]['a'], 3)
         self.assertEqual(data[4]['a'], 4)
 
+    def test_omit_field(self):
+        class ASerializer(Serializer):
+            a = Field(required=False, omit=True)
+
+        class BSerializer(Serializer):
+            b = Field(required=False)
+
+        class CSerializer(Serializer):
+            c = Field()
+
+        obj = Obj(a=None, b=None)
+        data = ASerializer(obj).data
+        self.assertTrue('a' not in data)
+        data = BSerializer(obj).data
+        self.assertTrue('b' in data)
+
+        data = BSerializer(Obj()).data
+        self.assertTrue('b' not in data)
+        self.assertRaises(AttributeError, lambda: CSerializer(Obj()).data)
+
+    def test_omit_method_field(self):
+        class ASerializer(Serializer):
+            a = MethodField(required=False, omit=True)
+
+            def get_a(self, obj):
+                return obj.a
+
+        class BSerializer(Serializer):
+            b = MethodField(required=False)
+
+            def get_b(self, obj):
+                return obj.b
+
+        class CSerializer(Serializer):
+            c = MethodField()
+
+            def get_c(self, obj):
+                return obj.c
+
+        obj = Obj(a=None, b=None)
+        data = ASerializer(obj).data
+        self.assertTrue('a' not in data)
+        data = BSerializer(obj).data
+        self.assertTrue('b' in data)
+
+        data = BSerializer(Obj()).data
+        self.assertTrue('b' not in data)
+        self.assertRaises(AttributeError, lambda: CSerializer(Obj()).data)
+
     def test_serializer_as_field(self):
         class ASerializer(Serializer):
             a = Field()
@@ -153,47 +202,6 @@ class TestSerializer(unittest.TestCase):
         o = Obj(a=10)
         data = ASerializer(o).data
         self.assertEqual(data['a'], 15)
-
-    def test_optional_field(self):
-        class ASerializer(Serializer):
-            a = IntField(required=False)
-
-        class BSerializer(Serializer):
-            b = IntField()
-
-        class CSerializer(DictSerializer):
-            c = IntField(required=False)
-
-        class DSerializer(DictSerializer):
-            d = IntField()
-
-        class ESerializer(Serializer):
-            e = CSerializer(required=False)
-
-        o = Obj()
-        data = ASerializer(o).data
-        # Tests that a missing key is not reflected in the output
-        # but with required=False does not raise an exception.
-        self.assertTrue('a' not in data)
-
-        o = Obj()
-        self.assertRaises(AttributeError, lambda: BSerializer(o).data)
-
-        d = {}
-        data = CSerializer(d).data
-        self.assertTrue('c' not in data)
-
-        d = {}
-        self.assertRaises(KeyError, lambda: DSerializer(d).data)
-
-        o = Obj()
-        data = ESerializer(o).data
-
-        o = Obj(a='5')
-        data = ASerializer(o).data
-        # Tests that the key on a non-required field with a value
-        # is in the output
-        self.assertEqual(data['a'], 5)
 
     def test_optional_field_falsy_values(self):
         # Tests the interactions between falsy values (0 or "")

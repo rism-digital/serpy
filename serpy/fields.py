@@ -19,17 +19,23 @@ class Field(object):
         instead of using the attribute name of the field.
     :param bool required: Whether the field is required. If set to ``False``,
         :meth:`Field.to_value` will not be called if the value is ``None``.
+        The serialized field will have a null value.
+    :param bool omit: Whether the field can be omitted. If set to ``True``,
+        this field will not be included in the serialized data if the value
+        is ``None`` and ``required`` is ``False``.
     """
     #: Set to ``True`` if the value function returned from
     #: :meth:`Field.as_getter` requires the serializer to be passed in as the
     #: first argument. Otherwise, the object will be the only parameter.
     getter_takes_serializer = False
 
-    def __init__(self, attr=None, call=False, label=None, required=True):
+    def __init__(self, attr=None, call=False, label=None, required=True,
+                 omit=False):
         self.attr = attr
         self.call = call
         self.label = label
         self.required = required
+        self.omit = omit
 
     def to_value(self, value):
         """Transform the serialized value.

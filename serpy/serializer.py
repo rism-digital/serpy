@@ -20,7 +20,7 @@ def _compile_field_to_tuple(field, name, serializer_cls):
     # Set the field name to a supplied label; defaults to the attribute name.
     name = field.label or name
 
-    return (name, getter, to_value, field.call, field.required,
+    return (name, getter, to_value, field.call, field.required, field.omit,
             field.getter_takes_serializer)
 
 
@@ -102,7 +102,7 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
 
     def _serialize(self, instance, fields):
         v = {}
-        for name, getter, to_value, call, required, pass_self in fields:
+        for name, getter, to_value, call, required, omit, pass_self in fields:
             # NB: Catch AttributeError for objects; KeyError for dictionaries
             if pass_self:
                 try:
@@ -124,6 +124,8 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                         result = result()
                     if to_value:
                         result = to_value(result)
+            if result is None and omit:
+                continue
             v[name] = result
         return v
 
