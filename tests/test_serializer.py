@@ -166,7 +166,7 @@ class TestSerializer(unittest.TestCase):
         data = ASerializer(o).data
         self.assertEqual(data['a'], 5)
         self.assertEqual(data['b'], 10)
-        # Check that an object value does not make it to the 
+        # Check that an object value does not make it to the
         # serialized value
         self.assertNotIn('x', data)
 

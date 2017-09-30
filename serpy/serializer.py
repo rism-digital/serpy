@@ -116,8 +116,8 @@ class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
                 if required:
                     raise TypeError('Field {0} is required', name)
                 # If the key raises an exception and it is not required,
-                # it is absent from the object. We can ignore it and continue to the next field.
-                # If it is required, this will raise the error.
+                # it is absent from the object. We can ignore it and continue to
+                # the next field. If it is required, this will raise the error.
                 continue
 
             if result is None:
