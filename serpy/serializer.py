@@ -1,24 +1,26 @@
-from serpy.fields import Field
-import operator
 import inspect
+import operator
+from typing import Callable, Optional, Union
+
+from serpy.fields import Field
 
 
 class SerializerBase(Field):
     _field_map = {}
 
 
-def _compile_field_to_tuple(field, name, serializer_cls):
+def _compile_field_to_tuple(field: Field, name: str, serializer_cls) -> tuple:
     getter = field.as_getter(name, serializer_cls)
     if getter is None:
         getter = serializer_cls.default_getter(field.attr or name)
 
     # Only set a to_value function if it has been overridden for performance.
-    to_value = None
+    to_value: Optional[Callable] = None
     if field.is_to_value_overridden():
         to_value = field.to_value
 
     # Set the field name to a supplied label; defaults to the attribute name.
-    name = field.label or name
+    name: str = field.label or name
 
     return (name, getter, to_value, field.call, field.required,
             field.getter_takes_serializer)
@@ -27,8 +29,8 @@ def _compile_field_to_tuple(field, name, serializer_cls):
 class SerializerMeta(type):
 
     @staticmethod
-    def _get_fields(direct_fields, serializer_cls):
-        field_map = {}
+    def _get_fields(direct_fields, serializer_cls) -> dict:
+        field_map: dict = {}
         # Get all the fields from base classes.
         for cls in serializer_cls.__mro__[::-1]:
             if issubclass(cls, SerializerBase):
@@ -37,7 +39,7 @@ class SerializerMeta(type):
         return field_map
 
     @staticmethod
-    def _compile_fields(field_map, serializer_cls):
+    def _compile_fields(field_map: dict, serializer_cls) -> list:
         return [
             _compile_field_to_tuple(field, name, serializer_cls)
             for name, field in field_map.items()
@@ -94,28 +96,22 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
     def __init__(self, instance=None, many=False, data=None, context=None,
                  **kwargs):
         if data is not None:
-            raise RuntimeError(
-                'serpy serializers do not support input validation')
+            raise RuntimeError('serpy serializers do not support input validation')
 
         super(Serializer, self).__init__(**kwargs)
         self.instance = instance
         self.many = many
-        self._data = None
+        self.context = context
+        self._data: Optional[Union[list, dict]] = None
 
-    def _serialize(self, instance, fields):
-        v = {}
+    def _serialize(self, instance, fields) -> dict:
+        v: dict = {}
         for name, getter, to_value, call, required, pass_self in fields:
             if pass_self:
-                if inspect.isawaitable(getter):
-                    result = await getter(self, instance)
-                else:
-                    result = getter(self, instance)
+                result = getter(self, instance)
             else:
                 try:
-                    if inspect.isawaitable(getter):
-                        result = await getter(instance)
-                    else:
-                        result = getter(instance)
+                    result = getter(instance)
                 except (KeyError, AttributeError):
                     if required:
                         raise
@@ -127,11 +123,13 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
                         result = result()
                     if to_value:
                         result = to_value(result)
-            v[name] = result
+
+            if result is not None:
+                v[name] = result
 
         return v
 
-    def to_value(self, instance):
+    def to_value(self, instance) -> Union[list, dict]:
         fields = self._compiled_fields
         if self.many:
             serialize = self._serialize
@@ -139,7 +137,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         return self._serialize(instance, fields)
 
     @property
-    def data(self):
+    def data(self) -> Union[list, dict]:
         """Get the serialized data from the :class:`Serializer`.
 
         The data will be cached for future accesses.
@@ -151,6 +149,115 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
 
 class DictSerializer(Serializer):
+    """:class:`DictSerializer` serializes python ``dicts`` instead of objects.
+
+    Instead of the serializer's fields fetching data using
+    ``operator.attrgetter``, :class:`DictSerializer` uses
+    ``operator.itemgetter``.
+
+    Example: ::
+
+        class FooSerializer(DictSerializer):
+            foo = IntField()
+            bar = FloatField()
+
+        foo = {'foo': '5', 'bar': '2.2'}
+        FooSerializer(foo).data
+        # {'foo': 5, 'bar': 2.2}
+    """
+    default_getter = operator.itemgetter
+
+
+class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
+    """:class:`Serializer` is used as a base for custom serializers.
+
+    The :class:`Serializer` class is also a subclass of :class:`Field`, and can
+    be used as a :class:`Field` to create nested schemas. A serializer is
+    defined by subclassing :class:`Serializer` and adding each :class:`Field`
+    as a class variable:
+
+    Example: ::
+
+        class FooSerializer(Serializer):
+            foo = Field()
+            bar = Field()
+
+        foo = Foo(foo='hello', bar=5)
+        FooSerializer(foo).data
+        # {'foo': 'hello', 'bar': 5}
+
+    :param instance: The object or objects to serialize.
+    :param bool many: If ``instance`` is a collection of objects, set ``many``
+        to ``True`` to serialize to a list.
+    :param context: Currently unused parameter for compatability with Django
+        REST Framework serializers.
+    """
+    #: The default getter used if :meth:`Field.as_getter` returns None.
+    default_getter = operator.attrgetter
+
+    def __init__(self, instance=None, many=False, data=None, context=None,
+                 **kwargs):
+        if data is not None:
+            raise RuntimeError(
+                'serpy serializers do not support input validation')
+
+        super(AsyncSerializer, self).__init__(**kwargs)
+        self.instance = instance
+        self.many = many
+        self.context = context
+        self._data: Optional[Union[list, dict]] = None
+
+    async def _serialize(self, instance, fields) -> dict:
+        v: dict = {}
+        for name, getter, to_value, call, required, pass_self in fields:
+            if pass_self:
+                if inspect.iscoroutinefunction(getter):
+                    result = await getter(self, instance)
+                else:
+                    result = getter(self, instance)
+            else:
+                try:
+                    result = getter(instance)
+                except (KeyError, AttributeError):
+                    if required:
+                        raise
+                    else:
+                        continue
+
+                if required or result is not None:
+                    if call:
+                        result = result()
+                    if to_value:
+                        if inspect.iscoroutinefunction(to_value):
+                            result = await to_value(result)
+                        else:
+                            result = to_value(result)
+
+            if result is not None:
+                v[name] = result
+
+        return v
+
+    async def to_value(self, instance) -> Union[list, dict]:
+        fields = self._compiled_fields
+        if self.many:
+            serialize = self._serialize
+            return [await serialize(o, fields) async for o in instance]
+        return await self._serialize(instance, fields)
+
+    @property
+    async def data(self) -> Union[list, dict]:
+        """Get the serialized data from the :class:`Serializer`.
+
+        The data will be cached for future accesses.
+        """
+        # Cache the data for next time .data is called.
+        if self._data is None:
+            self._data = await self.to_value(self.instance)
+        return self._data
+
+
+class AsyncDictSerializer(AsyncSerializer):
     """:class:`DictSerializer` serializes python ``dicts`` instead of objects.
 
     Instead of the serializer's fields fetching data using

@@ -1,6 +1,6 @@
 from serpy.fields import (
-    Field, BoolField, IntField, FloatField, MethodField, AsyncMethodField, StrField)
-from serpy.serializer import Serializer, DictSerializer, AsyncSerializer
+    Field, BoolField, IntField, FloatField, MethodField, StrField)
+from serpy.serializer import Serializer, DictSerializer, AsyncSerializer, AsyncDictSerializer
 
 __version__ = '0.3.1'
 __author__ = 'Clark DuVall'
@@ -10,11 +10,11 @@ __all__ = [
     'Serializer',
     'DictSerializer',
     'AsyncSerializer',
+    'AsyncDictSerializer',
     'Field',
     'BoolField',
     'IntField',
     'FloatField',
     'MethodField',
-    'AsyncMethodField',
     'StrField',
 ]

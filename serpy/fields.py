@@ -1,4 +1,5 @@
 import types
+from typing import Optional, Any
 
 
 class Field:
@@ -24,7 +25,11 @@ class Field:
     #: first argument. Otherwise, the object will be the only parameter.
     getter_takes_serializer = False
 
-    def __init__(self, attr=None, call=False, label=None, required=True):
+    def __init__(self,
+                 attr: Optional[str] = None,
+                 call: bool = False,
+                 label: Optional[str] = None,
+                 required: bool = True):
         self.attr = attr
         self.call = call
         self.label = label
@@ -51,7 +56,7 @@ class Field:
             return True
         return not getattr(to_value, '_serpy_base_implementation', False)
 
-    def as_getter(self, serializer_field_name, serializer_cls):
+    def as_getter(self, serializer_field_name: str, serializer_cls):
         """Returns a function that fetches an attribute from an object.
 
         Return ``None`` to use the default getter for the serializer defined in
@@ -73,6 +78,21 @@ class Field:
         :param serializer_cls: The :class:`Serializer` this field is a part of.
         """
         return None
+
+
+class StaticField(Field):
+    """
+    A serpy field that simply repeats a static value.
+    """
+    def __init__(self, value, *args, **kwargs) -> None:
+        super(StaticField, self).__init__(*args, **kwargs)
+        self.value = value
+
+    def to_value(self, value) -> Any:
+        return self.value
+
+    def as_getter(self, serializer_field_name: str, serializer_cls) -> Any:
+        return self.to_value
 
 
 class StrField(Field):
@@ -120,26 +140,12 @@ class MethodField(Field):
     """
     getter_takes_serializer = True
 
-    def __init__(self, method=None, **kwargs):
+    def __init__(self, method: Optional[str] = None, **kwargs):
         super(MethodField, self).__init__(**kwargs)
         self.method = method
 
-    def as_getter(self, serializer_field_name, serializer_cls):
+    def as_getter(self, serializer_field_name: str, serializer_cls):
         method_name = self.method
         if method_name is None:
             method_name = f"get_{serializer_field_name}"
         return getattr(serializer_cls, method_name)
-
-
-class AsyncMethodField(Field):
-    getter_takes_serializer = True
-
-    def __init__(self, method=None, **kwargs):
-        super(AsyncMethodField, self).__init__(**kwargs)
-        self.method = method
-
-    async def as_getter(self, serializer_field_name, serializer_cls):
-        method_name = self.method
-        if method_name is None:
-            method_name = f"get_{serializer_field_name}"
-        return await getattr(serializer_cls, method_name)
