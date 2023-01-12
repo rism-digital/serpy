@@ -1,5 +1,5 @@
 from serpy.fields import (
-    Field, BoolField, IntField, FloatField, MethodField, StrField)
+    Field, BoolField, IntField, FloatField, MethodField, StrField, StaticField)
 from serpy.serializer import Serializer, DictSerializer, AsyncSerializer, AsyncDictSerializer
 
 __version__ = '0.3.1'
@@ -17,4 +17,5 @@ __all__ = [
     'FloatField',
     'MethodField',
     'StrField',
+    'StaticField'
 ]
