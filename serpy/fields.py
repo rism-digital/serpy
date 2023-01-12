@@ -1,8 +1,7 @@
-import six
 import types
 
 
-class Field(object):
+class Field:
     """:class:`Field` is used to define what attributes will be serialized.
 
     A :class:`Field` maps a property or function on an object to a value in the
@@ -45,7 +44,7 @@ class Field(object):
         return value
     to_value._serpy_base_implementation = True
 
-    def _is_to_value_overridden(self):
+    def is_to_value_overridden(self):
         to_value = self.to_value
         # If to_value isn't a method, it must have been overridden.
         if not isinstance(to_value, types.MethodType):
@@ -78,7 +77,7 @@ class Field(object):
 
 class StrField(Field):
     """A :class:`Field` that converts the value to a string."""
-    to_value = staticmethod(six.text_type)
+    to_value = staticmethod(str)
 
 
 class IntField(Field):
@@ -128,5 +127,19 @@ class MethodField(Field):
     def as_getter(self, serializer_field_name, serializer_cls):
         method_name = self.method
         if method_name is None:
-            method_name = 'get_{0}'.format(serializer_field_name)
+            method_name = f"get_{serializer_field_name}"
         return getattr(serializer_cls, method_name)
+
+
+class AsyncMethodField(Field):
+    getter_takes_serializer = True
+
+    def __init__(self, method=None, **kwargs):
+        super(AsyncMethodField, self).__init__(**kwargs)
+        self.method = method
+
+    async def as_getter(self, serializer_field_name, serializer_cls):
+        method_name = self.method
+        if method_name is None:
+            method_name = f"get_{serializer_field_name}"
+        return await getattr(serializer_cls, method_name)

@@ -20,11 +20,11 @@ class TestFields(unittest.TestCase):
                 return value
 
         field = Field()
-        self.assertFalse(field._is_to_value_overridden())
+        self.assertFalse(field.is_to_value_overridden())
         field = TransField()
-        self.assertTrue(field._is_to_value_overridden())
+        self.assertTrue(field.is_to_value_overridden())
         field = IntField()
-        self.assertTrue(field._is_to_value_overridden())
+        self.assertTrue(field.is_to_value_overridden())
 
     def test_str_field(self):
         field = StrField()

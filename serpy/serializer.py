@@ -1,6 +1,5 @@
 from serpy.fields import Field
 import operator
-import six
 
 
 class SerializerBase(Field):
@@ -14,7 +13,7 @@ def _compile_field_to_tuple(field, name, serializer_cls):
 
     # Only set a to_value function if it has been overridden for performance.
     to_value = None
-    if field._is_to_value_overridden():
+    if field.is_to_value_overridden():
         to_value = field.to_value
 
     # Set the field name to a supplied label; defaults to the attribute name.
@@ -64,7 +63,7 @@ class SerializerMeta(type):
         return real_cls
 
 
-class Serializer(six.with_metaclass(SerializerMeta, SerializerBase)):
+class Serializer(SerializerBase, metaclass=SerializerMeta):
     """:class:`Serializer` is used as a base for custom serializers.
 
     The :class:`Serializer` class is also a subclass of :class:`Field`, and can
