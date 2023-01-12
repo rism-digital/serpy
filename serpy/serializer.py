@@ -142,6 +142,85 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         return self._data
 
 
+class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
+    """:class:`Serializer` is used as a base for custom serializers.
+
+    The :class:`Serializer` class is also a subclass of :class:`Field`, and can
+    be used as a :class:`Field` to create nested schemas. A serializer is
+    defined by subclassing :class:`Serializer` and adding each :class:`Field`
+    as a class variable:
+
+    Example: ::
+
+        class FooSerializer(Serializer):
+            foo = Field()
+            bar = Field()
+
+        foo = Foo(foo='hello', bar=5)
+        FooSerializer(foo).data
+        # {'foo': 'hello', 'bar': 5}
+
+    :param instance: The object or objects to serialize.
+    :param bool many: If ``instance`` is a collection of objects, set ``many``
+        to ``True`` to serialize to a list.
+    :param context: Currently unused parameter for compatability with Django
+        REST Framework serializers.
+    """
+    #: The default getter used if :meth:`Field.as_getter` returns None.
+    default_getter = operator.attrgetter
+
+    def __init__(self, instance=None, many=False, data=None, context=None,
+                 **kwargs):
+        if data is not None:
+            raise RuntimeError(
+                'serpy serializers do not support input validation')
+
+        super(AsyncSerializer, self).__init__(**kwargs)
+        self.instance = instance
+        self.many = many
+        self._data = None
+
+    async def _serialize(self, instance, fields):
+        v = {}
+        for name, getter, to_value, call, required, pass_self in fields:
+            if pass_self:
+                result = getter(self, instance)
+            else:
+                try:
+                    result = getter(instance)
+                except (KeyError, AttributeError):
+                    if required:
+                        raise
+                    else:
+                        continue
+                if required or result is not None:
+                    if call:
+                        result = result()
+                    if to_value:
+                        result = to_value(result)
+            v[name] = result
+
+        return v
+
+    def to_value(self, instance):
+        fields = self._compiled_fields
+        if self.many:
+            serialize = self._serialize
+            return [serialize(o, fields) for o in instance]
+        return self._serialize(instance, fields)
+
+    @property
+    def data(self):
+        """Get the serialized data from the :class:`Serializer`.
+
+        The data will be cached for future accesses.
+        """
+        # Cache the data for next time .data is called.
+        if self._data is None:
+            self._data = self.to_value(self.instance)
+        return self._data
+
+
 class DictSerializer(Serializer):
     """:class:`DictSerializer` serializes python ``dicts`` instead of objects.
 
