@@ -86,8 +86,12 @@ class StaticField(Field):
     """
     A serpy field that simply repeats a static value.
     """
-    def __init__(self, value: Any, *args: P.args, **kwargs: P.kwargs) -> None:
-        super(StaticField, self).__init__(*args, **kwargs)  # type: ignore
+    def __init__(self, value: Any,
+                 attr: Optional[str] = None,
+                 call: bool = False,
+                 label: Optional[str] = None,
+                 required: bool = True) -> None:
+        super().__init__(attr, call, label, required)
         self.value: Any = value
 
     def to_value(self, value: Any) -> Any:
@@ -143,7 +147,7 @@ class MethodField(Field):
     getter_takes_serializer = True
 
     def __init__(self, method: Optional[str] = None, **kwargs: P.kwargs):  # type: ignore
-        super(MethodField, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.method: Optional[str] = method
 
     def as_getter(self, serializer_field_name: str, serializer_cls: Any):
