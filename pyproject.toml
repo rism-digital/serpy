@@ -3,7 +3,7 @@ name = "serpy"
 version = "0.1.0"
 description = ""
 authors = ["Andrew Hankinson <andrew.hankinson@gmail.com>"]
-readme = "README.md"
+readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = "^3.9"
