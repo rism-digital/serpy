@@ -1,5 +1,7 @@
 import types
-from typing import Optional, Any
+from typing import Optional, Any, ParamSpec
+
+P = ParamSpec('P')
 
 
 class Field:
@@ -23,19 +25,19 @@ class Field:
     #: Set to ``True`` if the value function returned from
     #: :meth:`Field.as_getter` requires the serializer to be passed in as the
     #: first argument. Otherwise, the object will be the only parameter.
-    getter_takes_serializer = False
+    getter_takes_serializer: bool = False
 
     def __init__(self,
                  attr: Optional[str] = None,
                  call: bool = False,
                  label: Optional[str] = None,
                  required: bool = True):
-        self.attr = attr
-        self.call = call
-        self.label = label
-        self.required = required
+        self.attr: Optional[str] = attr
+        self.call: bool = call
+        self.label: Optional[str] = label
+        self.required: bool = required
 
-    def to_value(self, value):
+    def to_value(self, value: Any):
         """Transform the serialized value.
 
         Override this method to clean and validate values serialized by this
@@ -47,7 +49,7 @@ class Field:
         :param value: The value fetched from the object being serialized.
         """
         return value
-    to_value._serpy_base_implementation = True
+    to_value._serpy_base_implementation = True  # type: ignore
 
     def is_to_value_overridden(self):
         to_value = self.to_value
@@ -56,7 +58,7 @@ class Field:
             return True
         return not getattr(to_value, '_serpy_base_implementation', False)
 
-    def as_getter(self, serializer_field_name: str, serializer_cls):
+    def as_getter(self, serializer_field_name: str, serializer_cls: Any):
         """Returns a function that fetches an attribute from an object.
 
         Return ``None`` to use the default getter for the serializer defined in
@@ -84,35 +86,35 @@ class StaticField(Field):
     """
     A serpy field that simply repeats a static value.
     """
-    def __init__(self, value, *args, **kwargs) -> None:
-        super(StaticField, self).__init__(*args, **kwargs)
-        self.value = value
+    def __init__(self, value: Any, *args: P.args, **kwargs: P.kwargs) -> None:
+        super(StaticField, self).__init__(*args, **kwargs)  # type: ignore
+        self.value: Any = value
 
-    def to_value(self, value) -> Any:
+    def to_value(self, value: Any) -> Any:
         return self.value
 
-    def as_getter(self, serializer_field_name: str, serializer_cls) -> Any:
+    def as_getter(self, serializer_field_name: str, serializer_cls: Any) -> Any:
         return self.to_value
 
 
 class StrField(Field):
     """A :class:`Field` that converts the value to a string."""
-    to_value = staticmethod(str)
+    to_value: Any = staticmethod(str)
 
 
 class IntField(Field):
     """A :class:`Field` that converts the value to an integer."""
-    to_value = staticmethod(int)
+    to_value: Any = staticmethod(int)
 
 
 class FloatField(Field):
     """A :class:`Field` that converts the value to a float."""
-    to_value = staticmethod(float)
+    to_value: Any = staticmethod(float)
 
 
 class BoolField(Field):
     """A :class:`Field` that converts the value to a boolean."""
-    to_value = staticmethod(bool)
+    to_value: Any = staticmethod(bool)
 
 
 class MethodField(Field):
@@ -140,12 +142,12 @@ class MethodField(Field):
     """
     getter_takes_serializer = True
 
-    def __init__(self, method: Optional[str] = None, **kwargs):
+    def __init__(self, method: Optional[str] = None, **kwargs: P.kwargs):  # type: ignore
         super(MethodField, self).__init__(**kwargs)
-        self.method = method
+        self.method: Optional[str] = method
 
-    def as_getter(self, serializer_field_name: str, serializer_cls):
-        method_name = self.method
+    def as_getter(self, serializer_field_name: str, serializer_cls: Any):
+        method_name: Optional[str] = self.method
         if method_name is None:
             method_name = f"get_{serializer_field_name}"
         return getattr(serializer_cls, method_name)

@@ -1,15 +1,18 @@
 import inspect
 import operator
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, ParamSpec, Any, Mapping, ParamSpecKwargs
 
 from serpy.fields import Field
 
+P = ParamSpec("P")
+
 
 class SerializerBase(Field):
-    _field_map = {}
+    _field_map: dict = {}
+    _compiled_fields: tuple = ()
 
 
-def _compile_field_to_tuple(field: Field, name: str, serializer_cls) -> tuple:
+def _compile_field_to_tuple(field: Field, name: str, serializer_cls: Any) -> tuple:
     getter = field.as_getter(name, serializer_cls)
     if getter is None:
         getter = serializer_cls.default_getter(field.attr or name)
@@ -20,7 +23,7 @@ def _compile_field_to_tuple(field: Field, name: str, serializer_cls) -> tuple:
         to_value = field.to_value
 
     # Set the field name to a supplied label; defaults to the attribute name.
-    name: str = field.label or name
+    name = field.label or name
 
     return (name, getter, to_value, field.call, field.required,
             field.getter_takes_serializer)
@@ -29,7 +32,7 @@ def _compile_field_to_tuple(field: Field, name: str, serializer_cls) -> tuple:
 class SerializerMeta(type):
 
     @staticmethod
-    def _get_fields(direct_fields, serializer_cls) -> dict:
+    def _get_fields(direct_fields: Mapping, serializer_cls: Any) -> dict:
         field_map: dict = {}
         # Get all the fields from base classes.
         for cls in serializer_cls.__mro__[::-1]:
@@ -39,15 +42,15 @@ class SerializerMeta(type):
         return field_map
 
     @staticmethod
-    def _compile_fields(field_map: dict, serializer_cls) -> list:
+    def _compile_fields(field_map: dict, serializer_cls: Any) -> list[tuple]:
         return [
             _compile_field_to_tuple(field, name, serializer_cls)
             for name, field in field_map.items()
         ]
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(mcs, name, bases, attrs: dict):
         # Fields declared directly on the class.
-        direct_fields = {}
+        direct_fields: dict = {}
 
         # Take all the Fields from the attributes.
         for attr_name, field in attrs.items():
@@ -56,13 +59,14 @@ class SerializerMeta(type):
         for k in direct_fields.keys():
             del attrs[k]
 
-        real_cls = super(SerializerMeta, cls).__new__(cls, name, bases, attrs)
+        real_cls = super(SerializerMeta, mcs).__new__(mcs, name, bases, attrs)
 
-        field_map = cls._get_fields(direct_fields, real_cls)
-        compiled_fields = cls._compile_fields(field_map, real_cls)
+        field_map = mcs._get_fields(direct_fields, real_cls)
+        compiled_fields = mcs._compile_fields(field_map, real_cls)
 
-        real_cls._field_map = field_map
-        real_cls._compiled_fields = tuple(compiled_fields)
+        real_cls._field_map = field_map  # type: ignore
+        real_cls._compiled_fields = tuple(compiled_fields)  # type: ignore
+
         return real_cls
 
 
@@ -87,24 +91,26 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
     :param instance: The object or objects to serialize.
     :param bool many: If ``instance`` is a collection of objects, set ``many``
         to ``True`` to serialize to a list.
-    :param context: Currently unused parameter for compatability with Django
-        REST Framework serializers.
+    :param data: Provided for compatibility with DRF serializers. Should not be used.
+    :param dict context: A context dictionary for additional parameters to be passed into
+        the serializer instance.
     """
     #: The default getter used if :meth:`Field.as_getter` returns None.
-    default_getter = operator.attrgetter
+    default_getter: Any = operator.attrgetter
 
-    def __init__(self, instance=None, many=False, data=None, context=None,
-                 **kwargs):
-        if data is not None:
-            raise RuntimeError('serpy serializers do not support input validation')
+    def __init__(self,  # type: ignore
+                 instance: Optional[Any] = None,
+                 many: bool = False,
+                 context: Optional[dict] = None,
+                 **kwargs: P.kwargs):
 
         super(Serializer, self).__init__(**kwargs)
-        self.instance = instance
-        self.many = many
+        self.instance: Any = instance
+        self.many: bool = many
         self.context = context
         self._data: Optional[Union[list, dict]] = None
 
-    def _serialize(self, instance, fields) -> dict:
+    def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
         for name, getter, to_value, call, required, pass_self in fields:
             if pass_self:
@@ -130,7 +136,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         return v
 
     def to_value(self, instance) -> Union[list, dict]:
-        fields = self._compiled_fields
+        fields: tuple = self._compiled_fields
         if self.many:
             serialize = self._serialize
             return [serialize(o, fields) for o in instance]
@@ -165,7 +171,7 @@ class DictSerializer(Serializer):
         FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
-    default_getter = operator.itemgetter
+    default_getter: Any = operator.itemgetter
 
 
 class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
@@ -193,21 +199,21 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         REST Framework serializers.
     """
     #: The default getter used if :meth:`Field.as_getter` returns None.
-    default_getter = operator.attrgetter
+    default_getter: Any = operator.attrgetter
 
-    def __init__(self, instance=None, many=False, data=None, context=None,
-                 **kwargs):
-        if data is not None:
-            raise RuntimeError(
-                'serpy serializers do not support input validation')
+    def __init__(self,  # type: ignore
+                 instance: Optional[Any] = None,
+                 many: bool = False,
+                 context: Optional[dict] = None,
+                 **kwargs: P.kwargs):
 
         super(AsyncSerializer, self).__init__(**kwargs)
-        self.instance = instance
-        self.many = many
-        self.context = context
+        self.instance: Optional[Any] = instance
+        self.many: bool = many
+        self.context: Optional[dict] = context
         self._data: Optional[Union[list, dict]] = None
 
-    async def _serialize(self, instance, fields) -> dict:
+    async def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
         for name, getter, to_value, call, required, pass_self in fields:
             if pass_self:
@@ -238,8 +244,8 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    async def to_value(self, instance) -> Union[list, dict]:
-        fields = self._compiled_fields
+    async def to_value(self, instance: Any) -> Union[list, dict]:
+        fields: tuple = self._compiled_fields
         if self.many:
             serialize = self._serialize
             return [await serialize(o, fields) async for o in instance]
@@ -274,4 +280,4 @@ class AsyncDictSerializer(AsyncSerializer):
         FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
-    default_getter = operator.itemgetter
+    default_getter: Any = operator.itemgetter
