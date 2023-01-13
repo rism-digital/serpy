@@ -1,10 +1,8 @@
 import inspect
 import operator
-from typing import Callable, Optional, Union, ParamSpec, Any, Mapping
+from typing import Callable, Optional, Union, Any, Mapping
 
 from serpy.fields import Field
-
-P = ParamSpec("P")
 
 
 class SerializerBase(Field):
@@ -102,7 +100,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
                  instance: Optional[Any] = None,
                  many: bool = False,
                  context: Optional[dict] = None,
-                 **kwargs: P.kwargs):
+                 **kwargs):
 
         super(Serializer, self).__init__(**kwargs)
         self.instance: Any = instance
@@ -205,7 +203,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
                  instance: Optional[Any] = None,
                  many: bool = False,
                  context: Optional[dict] = None,
-                 **kwargs: P.kwargs):
+                 **kwargs):
 
         super(AsyncSerializer, self).__init__(**kwargs)
         self.instance: Optional[Any] = instance

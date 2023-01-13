@@ -1,7 +1,5 @@
 import types
-from typing import Optional, Any, ParamSpec
-
-P = ParamSpec('P')
+from typing import Optional, Any
 
 
 class Field:
@@ -146,7 +144,7 @@ class MethodField(Field):
     """
     getter_takes_serializer = True
 
-    def __init__(self, method: Optional[str] = None, **kwargs: P.kwargs):  # type: ignore
+    def __init__(self, method: Optional[str] = None, **kwargs):  # type: ignore
         super().__init__(**kwargs)
         self.method: Optional[str] = method
 
