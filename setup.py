@@ -35,5 +35,8 @@ setup(
         'contrib',
         'docs',
         'tests*',
-    ])
+    ]),
+    package_data = {
+        'serpy': ['py.typed'],
+    },
 )
