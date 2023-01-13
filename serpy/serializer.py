@@ -1,6 +1,6 @@
 import inspect
 import operator
-from typing import Callable, Optional, Union, ParamSpec, Any, Mapping, ParamSpecKwargs
+from typing import Callable, Optional, Union, ParamSpec, Any, Mapping
 
 from serpy.fields import Field
 
